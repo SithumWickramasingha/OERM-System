@@ -24,7 +24,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Key decisions:
  *  - Sessions are STATELESS (JWT replaces server-side sessions).
  *  - CSRF is disabled (safe for stateless REST APIs).
- *  - Public routes: /api/auth/** (register + login).
+ *  - Public routes:
+ *      /api/auth/**           → register + login
+ *      /swagger-ui/**         → Swagger UI static assets
+ *      /swagger-ui.html       → Swagger UI HTML entry-point
+ *      /v3/api-docs/**        → OpenAPI JSON/YAML spec
  *  - /api/teacher/** requires ROLE_TEACHER.
  *  - /api/student/** requires ROLE_STUDENT.
  *  - All other requests require authentication.
@@ -55,14 +59,23 @@ public class SecurityConfig {
 
                 // URL-based authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints — no token required
+                        // ── Public: Auth endpoints ───────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Role-restricted endpoints
+                        // ── Public: Swagger / OpenAPI endpoints ─────────────
+                        // These must be permitted so Swagger UI loads without a token.
+                        .requestMatchers(
+                                "/swagger-ui/**",      // Swagger UI static assets (JS, CSS)
+                                "/swagger-ui.html",    // Swagger UI entry-point
+                                "/v3/api-docs/**",     // OpenAPI JSON spec
+                                "/v3/api-docs.yaml"    // OpenAPI YAML spec
+                        ).permitAll()
+
+                        // ── Role-restricted endpoints ────────────────────────
                         .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
 
-                        // All other endpoints require a valid token
+                        // All other endpoints require a valid JWT token
                         .anyRequest().authenticated()
                 )
 
